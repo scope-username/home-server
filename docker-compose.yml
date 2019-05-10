@@ -1,0 +1,157 @@
+version: "3"
+
+networks:
+  myNetwork:
+    driver: bridge
+
+services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - myNetwork
+    volumes:
+      - ${MOUNT}/certs:/etc/nginx/certs:ro
+      - /etc/nginx/vhost.d
+      - /usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    labels:
+      - "com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy=true"
+
+  nginx-letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    container_name: nginx-letsencrypt
+    restart: always
+    networks:
+      - myNetwork
+    volumes_from:
+      - nginx-proxy
+    volumes:
+      - ${MOUNT}/certs:/etc/nginx/certs:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  ghost :
+    image: ghost
+    container_name: ghost
+    restart: always
+    ports:
+      - "2368:2368"
+    networks:
+      - myNetwork
+    environment:
+      - NODE_ENV=production
+      - url="https://${GHOST_URL}"
+      - VIRTUAL_HOST=${GHOST_URL}
+      - VIRTUAL_PORT="2368"
+      - LETSENCRYPT_HOST=${GHOST_URL}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+    volumes:
+      - ${MOUNT}/ghost/content:/var/lib/ghost/content
+
+  plex:
+    image: plexinc/pms-docker
+    container_name: plex
+    restart: always
+    ports:
+      - "32400:32400"
+      - "3005:3005"
+      - "8324:8324"
+      - "32469:32469"
+      - "1900:1900"
+      - "32410:32410"
+      - "32412:32412"
+      - "32413:32413"
+      - "32414:32414"
+    networks:
+      - myNetwork
+    environment:
+      - TZ=${TZ}
+      - PLEX_CLAIM=${PLEX_CLAIM}
+      - ADVERTISE_IP="http://${PUBLIC_IP}:32400/"
+      - VIRTUAL_HOST=${PLEX_URL}
+      - VIRTUAL_PORT="32400"
+      - LETSENCRYPT_HOST=${PLEX_URL}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+    hostname: myMedia
+    volumes:
+      - ${MOUNT}/plex/config:/config
+      - ${MOUNT}/plex/transcode:/transcode
+      - ${MOUNT}/plex/myMedia:/data
+
+  transmission:
+    image: haugene/transmission-openvpn
+    container_name: transmission-openvpn
+    restart: always
+    ports:
+      - "9091:9091"
+    networks:
+      - myNetwork
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - OPENVPN_PROVIDER=${VPN_PROVIDER}
+      - OPENVPN_CONFIG=${VPN_CONFIG}
+      - OPENVPN_USERNAME=${VPN_USERNAME}
+      - OPENVPN_PASSWORD=${VPN_PASSWORD}
+      - OPENVPN_OPTS="--inactive 3600 --ping 10 --ping-exit 60"
+      - CREATE_TUN_DEVICE=true
+      - TRANSMISSION_RPC_AUTHENTICATION_REQUIRED=true
+      - TRANSMISSION_RPC_WHITELIST_ENABLED=false
+      - TRANSMISSION_RPC_USERNAME=${TRANSMISSION_USERNAME}
+      - TRANSMISSION_RPC_PASSWORD=${TRANSMISSION_PASSWORD}
+      - VIRTUAL_HOST=${TRANSMISSION_URL}
+      - VIRTUAL_PORT="9091"
+      - LETSENCRYPT_HOST=${TRANSMISSION_URL}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+    volumes:
+      - ${MOUNT}/transmission:/data
+      - /etc/localtime:/etc/localtime:ro
+
+  sonarr:
+    image: linuxserver/sonarr
+    container_name: sonarr
+    restart: always
+    ports:
+      - "8989:8989"
+    networks:
+      - myNetwork
+    environment:
+      - PGID=${PUID}
+      - PUID=${PGID}
+      - TZ=${TZ}
+      - VIRTUAL_HOST=${SONARR_URL}
+      - VIRTUAL_PORT="8989"
+      - LETSENCRYPT_HOST=${SONARR_URL}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+    volumes:
+      - ${MOUNT}/sonarr-config:/config
+      - ${MOUNT}/transmission:/data
+      - ${MOUNT}/plex/myMedia/tv:/tv
+
+  radarr :
+    image: linuxserver/radarr
+    container_name: radarr
+    restart: always
+    ports:
+      - "7878:7878"
+    networks:
+      - myNetwork
+    environment:
+      - PGID=${PUID}
+      - PUID=${PGID}
+      - TZ=${TZ}
+      - VIRTUAL_HOST=${RADARR_URL}
+      - VIRTUAL_PORT="7878"
+      - LETSENCRYPT_HOST=${RADARR_URL}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+    volumes:
+      - ${MOUNT}/radarr-config:/config
+      - ${MOUNT}/transmission:/data
+      - ${MOUNT}/plex/myMedia/movies:/movies
