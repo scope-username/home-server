@@ -51,6 +51,22 @@ services:
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
     volumes:
       - ${MOUNT}/ghost/content:/var/lib/ghost/content
+  
+  bitwarden :
+    image: mprasil/bitwarden
+    container_name: bitwarden
+    restart: always
+    networks:
+      - myNetwork
+    environment:
+      - SIGNUPS_ALLOWED=true
+      - SHOW_PASSWORD_HINT=false
+      - DOMAIN=${BITWARDEN_URL}
+      - VIRTUAL_HOST=${BITWARDEN_URL}
+      - LETSENCRYPT_HOST=${BITWARDEN_URL}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+    volumes:
+      - ${MOUNT}/bitwarden/data/:/data/
 
   plex:
     image: plexinc/pms-docker
