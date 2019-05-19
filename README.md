@@ -2,6 +2,7 @@
 A docker compose file for deploying a nginx reverse proxy with letsencrypt for SSL certification. You can also deploy 
 
 - ghost (free and open source blogging platforming)
+- bitwarden (unofficial version of original bitwarden open source password manager)
 - plex (media server)
 - transmission (torrent client with WebUI while connecting to OpenVPN)
 - sonarr (monitor multiple RSS feeds for tv shows)
