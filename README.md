@@ -1,4 +1,4 @@
-# docker-dompose
+# docker-compose
 A docker compose file for deploying a nginx reverse proxy with letsencrypt for SSL certification. You can also deploy 
 
 - ghost (free and open source blogging platforming)
